@@ -39,9 +39,12 @@ jobs:
           rm -rf .git .github .vscode .env.local .env.example
           rm -rf node_modules/.cache
           rm -rf TMDB_API_DOCS.md README.md
+          # Create .deployment file to skip build on Azure
+          echo "[config]" > .deployment
+          echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> .deployment
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip .next app lib components public node_modules package.json package-lock.json next.config.ts server.js auth.ts
+        run: zip -r release.zip .next app lib components public node_modules package.json package-lock.json next.config.ts server.js auth.ts .deployment
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
