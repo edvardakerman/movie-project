@@ -1,4 +1,5 @@
 import { CosmosClient } from "@azure/cosmos"
+import { WatchlistMovie } from "./types"
 
 const databaseName = process.env.COSMOS_DB_DATABASE_NAME || "moviedb"
 const containerName = process.env.COSMOS_DB_CONTAINER_NAME || "users"
@@ -42,6 +43,7 @@ export interface User {
   image: string
   githubId: string
   createdAt?: string
+  watchlist?: WatchlistMovie[]
 }
 
 export async function createUser(user: User) {
@@ -52,6 +54,7 @@ export async function createUser(user: User) {
       ...user,
       id: user.email, // Use email as id for simplicity
       createdAt: new Date().toISOString(),
+      watchlist: [], // Initialize empty watchlist
     }
     
     const { resource } = await container.items.create(newUser)
@@ -89,5 +92,104 @@ export async function getAllUsers() {
   } catch (error) {
     console.error("Error getting all users:", error)
     throw error
+  }
+}
+
+// Watchlist functions
+export async function addToWatchlist(email: string, movie: WatchlistMovie) {
+  try {
+    const { container } = await initializeDatabase()
+    
+    // Get current user
+    const user = await getUserByEmail(email)
+    if (!user) {
+      throw new Error("User not found")
+    }
+    
+    // Initialize watchlist if it doesn't exist
+    const watchlist = user.watchlist || []
+    
+    // Check if movie already exists
+    const exists = watchlist.some((item: WatchlistMovie) => item.movieId === movie.movieId)
+    if (exists) {
+      return { success: false, message: "Movie already in watchlist" }
+    }
+    
+    // Add movie with timestamp
+    const movieWithTimestamp = {
+      ...movie,
+      addedAt: new Date().toISOString(),
+    }
+    
+    watchlist.push(movieWithTimestamp)
+    
+    // Update user document
+    const updatedUser = {
+      ...user,
+      watchlist,
+    }
+    
+    const { resource } = await container.item(email, email).replace(updatedUser)
+    return { success: true, watchlist: resource.watchlist }
+  } catch (error) {
+    console.error("Error adding to watchlist:", error)
+    throw error
+  }
+}
+
+export async function removeFromWatchlist(email: string, movieId: number) {
+  try {
+    const { container } = await initializeDatabase()
+    
+    // Get current user
+    const user = await getUserByEmail(email)
+    if (!user) {
+      throw new Error("User not found")
+    }
+    
+    // Filter out the movie
+    const watchlist = (user.watchlist || []).filter(
+      (item: WatchlistMovie) => item.movieId !== movieId
+    )
+    
+    // Update user document
+    const updatedUser = {
+      ...user,
+      watchlist,
+    }
+    
+    const { resource } = await container.item(email, email).replace(updatedUser)
+    return { success: true, watchlist: resource.watchlist }
+  } catch (error) {
+    console.error("Error removing from watchlist:", error)
+    throw error
+  }
+}
+
+export async function getWatchlist(email: string): Promise<WatchlistMovie[]> {
+  try {
+    const user = await getUserByEmail(email)
+    if (!user) {
+      return []
+    }
+    
+    // Return watchlist sorted by most recently added
+    return (user.watchlist || []).sort(
+      (a: WatchlistMovie, b: WatchlistMovie) => 
+        new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+    )
+  } catch (error) {
+    console.error("Error getting watchlist:", error)
+    return []
+  }
+}
+
+export async function isInWatchlist(email: string, movieId: number): Promise<boolean> {
+  try {
+    const watchlist = await getWatchlist(email)
+    return watchlist.some((item) => item.movieId === movieId)
+  } catch (error) {
+    console.error("Error checking watchlist:", error)
+    return false
   }
 }
