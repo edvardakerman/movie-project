@@ -1,21 +1,27 @@
 import { CosmosClient } from "@azure/cosmos"
 
-const endpoint = process.env.COSMOS_DB_CONNECTION_STRING
 const databaseName = process.env.COSMOS_DB_DATABASE_NAME || "moviedb"
 const containerName = process.env.COSMOS_DB_CONTAINER_NAME || "users"
 
-if (!endpoint) {
-  throw new Error("COSMOS_DB_CONNECTION_STRING is not defined")
-}
-
-const client = new CosmosClient(endpoint)
-
+let client: CosmosClient | null = null
 let database: any
 let container: any
 
+function getClient() {
+  if (!client) {
+    const endpoint = process.env.COSMOS_DB_CONNECTION_STRING
+    if (!endpoint) {
+      throw new Error("COSMOS_DB_CONNECTION_STRING is not defined")
+    }
+    client = new CosmosClient(endpoint)
+  }
+  return client
+}
+
 async function initializeDatabase() {
   if (!database) {
-    const { database: db } = await client.databases.createIfNotExists({
+    const cosmosClient = getClient()
+    const { database: db } = await cosmosClient.databases.createIfNotExists({
       id: databaseName,
     })
     database = db
