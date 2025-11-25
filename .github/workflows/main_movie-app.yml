@@ -32,7 +32,7 @@ jobs:
           CI: true
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip .next node_modules package.json package-lock.json next.config.ts server.js
+        run: zip -r release.zip .next app lib public node_modules package.json package-lock.json next.config.ts server.js
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
