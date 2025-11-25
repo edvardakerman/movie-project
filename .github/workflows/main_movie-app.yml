@@ -42,9 +42,12 @@ jobs:
           # Create .deployment file to skip build on Azure
           echo "[config]" > .deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> .deployment
+          # Create custom startup script
+          echo "node server.js" > startup.sh
+          chmod +x startup.sh
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip .next app lib components public node_modules package.json package-lock.json next.config.ts server.js auth.ts .deployment
+        run: zip -r release.zip .next app lib components public node_modules package.json package-lock.json next.config.js server.js auth.ts .deployment startup.sh
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
