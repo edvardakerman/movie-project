@@ -31,6 +31,15 @@ jobs:
         env:
           CI: true
 
+      - name: Clean up unnecessary files before zip
+        run: |
+          # Remove development dependencies
+          npm prune --production
+          # Remove unnecessary files
+          rm -rf .git .github .vscode .env.local .env.example
+          rm -rf node_modules/.cache
+          rm -rf TMDB_API_DOCS.md README.md
+
       - name: Zip artifact for deployment
         run: zip -r release.zip .next app lib components public node_modules package.json package-lock.json next.config.ts server.js auth.ts
 
